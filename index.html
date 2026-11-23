@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Enjambre de Luciérnagas — Palabras y Figuras</title>
+  <!-- Tailwind CSS para la interfaz minimalista flotante -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Fuente Inter para legibilidad moderna -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #04060c;
+      font-family: 'Inter', sans-serif;
+      user-select: none;
+    }
+    #fireflyCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+    /* Animación sutil para el panel inferior */
+    @keyframes floatUp {
+      from {
+        opacity: 0;
+        transform: translateY(18px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .glass-panel {
+      background: rgba(10, 15, 28, 0.68);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(253, 224, 71, 0.16);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      animation: floatUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .preset-btn {
+      transition: all 0.2s ease;
+    }
+    .preset-btn:active {
+      transform: scale(0.95);
+    }
+  </style>
+</head>
+<body class="relative text-slate-100">
+
+  <!-- Lienzo principal de simulación -->
+  <canvas id="fireflyCanvas"></canvas>
+
+  <!-- Indicador superior sutil -->
+  <header class="pointer-events-none fixed top-0 left-0 right-0 z-10 flex items-center justify-between px-5 py-4 sm:px-8 sm:py-6">
+    <div class="flex items-center gap-2.5">
+      <span class="inline-block h-2.5 w-2.5 rounded-full bg-amber-300 shadow-[0_0_12px_#fde047] animate-pulse"></span>
+      <h1 class="text-sm sm:text-base font-medium tracking-wide text-amber-100/90">
+        Luciérnagas
+      </h1>
+    </div>
+    <div class="pointer-events-auto flex items-center gap-2">
+      <button
+        id="toggleModeBtn"
+        title="Cambiar interacción del cursor (Repeler / Atraer)"
+        class="rounded-full bg-slate-900/60 hover:bg-slate-800/80 border border-amber-300/20 px-3 py-1.5 text-xs text-amber-200/80 backdrop-blur-md transition cursor-pointer"
+      >
+        Cursor: <span id="cursorModeLabel" class="font-medium text-amber-300">Espantar</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Panel de control flotante inferior -->
+  <div class="fixed bottom-4 left-0 right-0 z-20 flex flex-col items-center px-3 sm:bottom-7 sm:px-6 pointer-events-none">
+    <div class="glass-panel pointer-events-auto w-full max-w-xl rounded-2xl p-3 sm:p-4">
+      
+      <!-- Botones rápidos de figuras y acciones -->
+      <div class="mb-2.5 flex flex-wrap items-center justify-between gap-1.5">
+        <div class="flex flex-wrap items-center gap-1.5">
+          <button type="button" data-shape="corazon" class="preset-btn rounded-full bg-amber-400/10 hover:bg-amber-400/20 border border-amber-300/25 px-2.5 py-1 text-xs font-medium text-amber-200 cursor-pointer">
+            ❤️ Corazón
+          </button>
+          <button type="button" data-shape="cigarro" class="preset-btn rounded-full bg-amber-400/10 hover:bg-amber-400/20 border border-amber-300/25 px-2.5 py-1 text-xs font-medium text-amber-200 cursor-pointer">
+            🚬 Cigarro
+          </button>
+          <button type="button" data-shape="calavera" class="preset-btn rounded-full bg-amber-400/10 hover:bg-amber-400/20 border border-amber-300/25 px-2.5 py-1 text-xs font-medium text-amber-200 cursor-pointer">
+            💀 Calavera
+          </button>
+          <button type="button" data-shape="revolver" class="preset-btn rounded-full bg-amber-400/10 hover:bg-amber-400/20 border border-amber-300/25 px-2.5 py-1 text-xs font-medium text-amber-200 cursor-pointer">
+            🔫 Revólver
+          </button>
+          <button type="button" data-shape="luna" class="preset-btn rounded-full bg-amber-400/10 hover:bg-amber-400/20 border border-amber-300/25 px-2.5 py-1 text-xs font-medium text-amber-200 cursor-pointer">
+            🌙 Luna
+          </button>
+          <button type="button" data-shape="estrella" class="preset-btn rounded-full bg-amber-400/10 hover:bg-amber-400/20 border border-amber-300/25 px-2.5 py-1 text-xs font-medium text-amber-200 cursor-pointer">
+            ⭐ Estrella
+          </button>
+        </div>
+
+        <button
+          type="button"
+          id="scatterBtn"
+          class="preset-btn rounded-full bg-slate-800/80 hover:bg-slate-700/80 border border-slate-600/40 px-3 py-1 text-xs font-medium text-slate-300 cursor-pointer"
+        >
+          ✨ Dispersar
+        </button>
+      </div>
+
+      <!-- Formulario de entrada de texto -->
+      <form id="morphForm" class="flex items-center gap-2">
+        <input
+          id="wordInput"
+          type="text"
+          maxlength="24"
+          autocomplete="off"
+          placeholder="Escribe una palabra, 'corazón', 'cigarro', 'calavera'..."
+          class="w-full rounded-xl bg-slate-950/80 border border-amber-300/20 focus:border-amber-300/60 px-3.5 py-2.5 text-sm text-amber-50 placeholder-slate-400/80 outline-none transition"
+        />
+        <button
+          type="submit"
+          class="shrink-0 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-300 hover:from-amber-300 hover:to-yellow-200 px-4 py-2.5 text-sm font-semibold text-slate-950 shadow-[0_0_20px_rgba(251,191,36,0.35)] transition active:scale-95 cursor-pointer"
+        >
+          Formar
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * Simulación Interactiva de Enjambre de Luciérnagas de Alta Definición
+     * - ~2,100 luciérnagas optimizadas a 60 FPS mediante sprites pre-renderizados.
+     * - Muestreo fino de píxeles con amortiguación adaptativa para bordes ultra nítidos.
+     */
+    (function () {
+      const canvas = document.getElementById('fireflyCanvas');
+      const ctx = canvas.getContext('2d', { alpha: false });
+
+      // Canvas oculto para dibujar texto o siluetas y extraer coordenadas
+      const offCanvas = document.createElement('canvas');
+      const offCtx = offCanvas.getContext('2d', { willReadFrequently: true });
+
+      // Referencias a controles UI
+      const morphForm = document.getElementById('morphForm');
+      const wordInput = document.getElementById('wordInput');
+      const scatterBtn = document.getElementById('scatterBtn');
+      const toggleModeBtn = document.getElementById('toggleModeBtn');
+      const cursorModeLabel = document.getElementById('cursorModeLabel');
+      const presetButtons = document.querySelectorAll('.preset-btn[data-shape]');
+
+      // Alta densidad de partículas para nitidez extrema
+      const FIREFLY_COUNT = window.innerWidth < 640 ? 1550 : 2150;
+      let width = 0;
+      let height = 0;
+      let dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+      // Estado actual de la formación
+      let currentShape = 'scatter';
+      let currentText = '';
+      let targetPoints = [];
+      let bgStars = [];
+      let grassBlades = [];
+
+      // Interacción con puntero / pantalla táctil
+      const pointer = {
+        x: -9999,
+        y: -9999,
+        active: false,
+        mode: 'repel' // 'repel' o 'attract'
+      };
+
+      // Cache de sprites brillantes para máximo rendimiento
+      const spriteCache = {};
+
+      /**
+       * Genera texturas circulares con núcleo intenso y halo controlado para no empastar letras
+       */
+      function createGlowSprites() {
+        const palettes = [
+          { key: 'gold', core: '#ffffff', inner: '#ffd166', outer: 'rgba(255, 159, 28, 0)' },
+          { key: 'amber', core: '#fff8eb', inner: '#ff9f1c', outer: 'rgba(217, 119, 6, 0)' },
+          { key: 'warmWhite', core: '#ffffff', inner: '#fef08a', outer: 'rgba(250, 204, 21, 0)' },
+          { key: 'ember', core: '#fff1f2', inner: '#ff4d4d', outer: 'rgba(220, 38, 38, 0)' },
+          { key: 'smoke', core: '#e2e8f0', inner: '#94a3b8', outer: 'rgba(71, 85, 105, 0)' }
+        ];
+
+        palettes.forEach((p) => {
+          const size = 48;
+          const c = document.createElement('canvas');
+          c.width = size;
+          c.height = size;
+          const gCtx = c.getContext('2d');
+          const half = size / 2;
+
+          const grad = gCtx.createRadialGradient(half, half, 0, half, half, half);
+          grad.addColorStop(0, p.core);
+          grad.addColorStop(0.28, p.inner);
+          grad.addColorStop(0.55, p.inner + '44');
+          grad.addColorStop(1, p.outer);
+
+          gCtx.fillStyle = grad;
+          gCtx.fillRect(0, 0, size, size);
+          spriteCache[p.key] = c;
+        });
+      }
+
+      /**
+       * Clase que representa cada luciérnaga individual con precisión de posicionamiento
+       */
+      class Firefly {
+        constructor(index) {
+          this.index = index;
+          this.x = Math.random() * width;
+          this.y = Math.random() * height;
+          this.vx = (Math.random() - 0.5) * 1.4;
+          this.vy = (Math.random() - 0.5) * 1.4;
+
+          this.targetX = null;
+          this.targetY = null;
+          this.hasTarget = false;
+          this.isAmbient = false; // Solo ~3% quedan tenues en el fondo
+          this.specialRole = null;
+
+          // Tamaño compacto cuando está formada para mantener los bordes ultra nítidos
+          this.freeSize = 7 + Math.random() * 7;
+          this.formedSize = 4.6 + Math.random() * 2.8;
+          this.currentSize = this.freeSize;
+
+          this.phase = Math.random() * Math.PI * 2;
+          this.pulseSpeed = 0.02 + Math.random() * 0.035;
+          this.wanderAngle = Math.random() * Math.PI * 2;
+          this.wanderSpeed = 0.015 + Math.random() * 0.02;
+
+          const r = Math.random();
+          if (r < 0.52) this.colorKey = 'gold';
+          else if (r < 0.85) this.colorKey = 'amber';
+          else this.colorKey = 'warmWhite';
+        }
+
+        setTarget(pt, ambient = false) {
+          this.isAmbient = ambient;
+          if (!pt) {
+            this.hasTarget = false;
+            this.targetX = null;
+            this.targetY = null;
+            this.specialRole = null;
+            return;
+          }
+          this.hasTarget = true;
+          this.targetX = pt.x;
+          this.targetY = pt.y;
+          this.specialRole = pt.role || null;
+        }
+
+        update(time) {
+          this.phase += this.pulseSpeed;
+          this.wanderAngle += this.wanderSpeed;
+
+          if (this.hasTarget && this.targetX !== null) {
+            let tx = this.targetX;
+            let ty = this.targetY;
+
+            // Latido suave sincronizado en el corazón
+            if (currentShape === 'corazon') {
+              const cx = width * 0.5;
+              const cy = height * 0.43;
+              const beat = 1 + Math.sin(time * 0.0042) * 0.035;
+              tx = cx + (tx - cx) * beat;
+              ty = cy + (ty - cy) * beat;
+            }
+
+            // Humo ascendente ondulante en el cigarro
+            if (this.specialRole === 'smoke') {
+              tx += Math.sin(time * 0.0032 + this.index * 0.35) * 6;
+              ty += Math.cos(time * 0.0024 + this.index * 0.25) * 3;
+            }
+
+            const dx = tx - this.x;
+            const dy = ty - this.y;
+            const dist = Math.hypot(dx, dy);
+
+            // Micro-vibración mínima al asentarse para no deformar letras ni contornos
+            const jitterAmp = dist < 14 ? 0.035 : 0.28;
+            const flutterX = Math.cos(this.wanderAngle) * jitterAmp;
+            const flutterY = Math.sin(this.wanderAngle * 1.25) * jitterAmp;
+
+            const springStrength = dist > 90 ? 0.065 : 0.11;
+            this.vx += dx * springStrength * 0.18 + flutterX;
+            this.vy += dy * springStrength * 0.18 + flutterY;
+
+            // Alta amortiguación cerca del objetivo para clavarse en el píxel exacto
+            const damping = dist < 18 ? 0.78 : 0.85;
+            this.vx *= damping;
+            this.vy *= damping;
+
+            // Transición suave al tamaño compacto de alta definición
+            const targetSz = this.specialRole === 'outline' ? this.formedSize * 1.15 : this.formedSize;
+            this.currentSize += (targetSz - this.currentSize) * 0.12;
+          } else {
+            // Vuelo libre por el bosque nocturno
+            const flutterX = Math.cos(this.wanderAngle) * 0.35;
+            const flutterY = Math.sin(this.wanderAngle * 1.3) * 0.35;
+            this.vx += flutterX * 0.12;
+            this.vy += flutterY * 0.12;
+
+            const speed = Math.hypot(this.vx, this.vy);
+            if (speed > 1.7) {
+              this.vx = (this.vx / speed) * 1.7;
+              this.vy = (this.vy / speed) * 1.7;
+            }
+
+            const margin = 28;
+            const bottomLimit = height - 115;
+            if (this.x < margin) this.vx += 0.08;
+            if (this.x > width - margin) this.vx -= 0.08;
+            if (this.y < margin) this.vy += 0.08;
+            if (this.y > bottomLimit) this.vy -= 0.08;
+
+            this.currentSize += (this.freeSize - this.currentSize) * 0.08;
+          }
+
+          // Interacción con el dedo o ratón
+          if (pointer.active) {
+            const pdx = this.x - pointer.x;
+            const pdy = this.y - pointer.y;
+            const pDist = Math.hypot(pdx, pdy);
+            const radius = 115;
+
+            if (pDist < radius && pDist > 0.1) {
+              const force = ((radius - pDist) / radius) * 2.5;
+              const dir = pointer.mode === 'repel' ? 1 : -0.65;
+              this.vx += (pdx / pDist) * force * dir;
+              this.vy += (pdy / pDist) * force * dir;
+            }
+          }
+
+          this.x += this.vx;
+          this.y += this.vy;
+        }
+
+        draw(ctx, time) {
+          // Cuando forman una figura, mantener un brillo base estable (0.68 - 1.0) para que ningún trazo desaparezca al parpadear
+          const wave = (Math.sin(this.phase) + 1) * 0.5;
+          let alpha = this.hasTarget ? (0.68 + wave * 0.32) : (0.3 + wave * 0.7);
+
+          // Las pocas luciérnagas ambientales de fondo son muy tenues para no estorbar la lectura
+          if (this.isAmbient && currentShape !== 'scatter') {
+            alpha *= 0.22;
+          }
+
+          let activeSprite = spriteCache[this.colorKey];
+
+          if (this.specialRole === 'ember') {
+            activeSprite = spriteCache.ember;
+          } else if (this.specialRole === 'smoke') {
+            activeSprite = spriteCache.smoke;
+            alpha *= 0.65;
+          } else if (this.specialRole === 'outline') {
+            activeSprite = spriteCache.warmWhite;
+          }
+
+          const size = this.currentSize;
+          ctx.globalAlpha = alpha;
+          ctx.drawImage(
+            activeSprite,
+            this.x - size * 0.5,
+            this.y - size * 0.5,
+            size,
+            size
+          );
+        }
+      }
+
+      let fireflies = [];
+
+      /**
+       * Genera estrellas lejanas y silueta de pasto nocturno para ambientación
+       */
+      function buildScenery() {
+        bgStars = [];
+        const starCount = Math.floor((width * height) / 14000);
+        for (let i = 0; i < starCount; i++) {
+          bgStars.push({
+            x: Math.random() * width,
+            y: Math.random() * (height * 0.85),
+            r: Math.random() * 1.1 + 0.3,
+            alpha: Math.random() * 0.45 + 0.1,
+            twinkle: Math.random() * 0.02 + 0.005
+          });
+        }
+
+        grassBlades = [];
+        const bladeCount = Math.floor(width / 6);
+        for (let i = 0; i < bladeCount; i++) {
+          grassBlades.push({
+            x: i * 6 + Math.random() * 5,
+            h: 16 + Math.random() * 34,
+            lean: (Math.random() - 0.5) * 14,
+            phase: Math.random() * Math.PI * 2
+          });
+        }
+      }
+
+      /**
+       * Ajusta el tamaño del canvas al redimensionar la ventana
+       */
+      function resizeCanvas() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        offCanvas.width = width;
+        offCanvas.height = height;
+
+        buildScenery();
+
+        if (currentShape === 'text' && currentText) {
+          formText(currentText);
+        } else if (currentShape !== 'scatter') {
+          formPresetShape(currentShape);
+        }
+      }
+
+      /**
+       * Normaliza texto quitando acentos y espacios extra para detectar palabras clave
+       */
+      function normalizeKeyword(str) {
+        return str
+          .trim()
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '');
+      }
+
+      /**
+       * Extrae coordenadas de píxeles encendidos desde el offCanvas con paso fino
+       */
+      function samplePointsFromOffscreen(step = 3, tagRoleFn = null) {
+        const imgData = offCtx.getImageData(0, 0, width, height).data;
+        const pts = [];
+
+        for (let y = 0; y < height; y += step) {
+          for (let x = 0; x < width; x += step) {
+            const idx = (y * width + x) * 4;
+            const alpha = imgData[idx + 3];
+            if (alpha > 140) {
+              const role = tagRoleFn ? tagRoleFn(x, y, imgData, idx) : null;
+              pts.push({ x, y, role });
+            }
+          }
+        }
+        return pts;
+      }
+
+      /**
+       * Distribuye las ~2,150 luciérnagas de forma uniforme y exacta sobre la silueta
+       */
+      function assignPointsToFireflies(points) {
+        if (!points || points.length === 0) {
+          scatterFireflies();
+          return;
+        }
+
+        // Mezclar puntos para asignación orgánica
+        for (let i = points.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [points[i], points[j]] = [points[j], points[i]];
+        }
+
+        targetPoints = points;
+
+        // Reservar solo un 3% de luciérnagas muy tenues en el fondo; el 97% forma la figura/texto
+        const activeBudget = Math.floor(fireflies.length * 0.97);
+
+        for (let i = 0; i < fireflies.length; i++) {
+          if (i < activeBudget) {
+            const pt = points[i % points.length];
+            // Si sobran luciérnagas respecto a los puntos, superponerlas con desfase sub-píxel (1.5px) para intensificar la luz sin emborronar
+            const isExtraLayer = i >= points.length;
+            fireflies[i].setTarget(
+              {
+                x: isExtraLayer ? pt.x + (Math.random() - 0.5) * 1.8 : pt.x,
+                y: isExtraLayer ? pt.y + (Math.random() - 0.5) * 1.8 : pt.y,
+                role: pt.role
+              },
+              false
+            );
+          } else {
+            fireflies[i].setTarget(null, true);
+          }
+        }
+      }
+
+      /**
+       * Libera todas las luciérnagas para que floten por el cielo
+       */
+      function scatterFireflies() {
+        currentShape = 'scatter';
+        currentText = '';
+        targetPoints = [];
+        fireflies.forEach((f) => f.setTarget(null, false));
+      }
+
+      /**
+       * Dibuja siluetas vectoriales nítidas y de alto contraste en el canvas oculto
+       */
+      function formPresetShape(shapeKey) {
+        currentShape = shapeKey;
+        offCtx.clearRect(0, 0, width, height);
+
+        const cx = width * 0.5;
+        const cy = height * 0.42;
+        const minDim = Math.min(width, height);
+
+        offCtx.save();
+        offCtx.fillStyle = '#ffffff';
+        offCtx.strokeStyle = '#ffffff';
+        offCtx.lineCap = 'round';
+        offCtx.lineJoin = 'round';
+
+        if (shapeKey === 'corazon') {
+          // Corazón clásico súper definido con contorno brillante (verde en offscreen) y relleno denso
+          const size = minDim * 0.34;
+          offCtx.beginPath();
+          offCtx.moveTo(cx, cy - size * 0.32);
+          offCtx.bezierCurveTo(
+            cx - size * 0.52, cy - size * 0.88,
+            cx - size * 1.18, cy - size * 0.08,
+            cx, cy + size * 0.68
+          );
+          offCtx.bezierCurveTo(
+            cx + size * 1.18, cy - size * 0.08,
+            cx + size * 0.52, cy - size * 0.88,
+            cx, cy - size * 0.32
+          );
+          offCtx.closePath();
+          offCtx.fill();
+
+          // Contorno exterior marcado en verde puro (#00ff00) para darle borde luminoso
+          offCtx.lineWidth = 6;
+          offCtx.strokeStyle = '#00ff00';
+          offCtx.stroke();
+
+        } else if (shapeKey === 'cigarro') {
+          // Cigarro en diagonal elegante con filtro separado, cuerpo largo, brasa naranja/roja y volutas finas de humo
+          offCtx.save();
+          offCtx.translate(cx - minDim * 0.03, cy + minDim * 0.06);
+          offCtx.rotate(-0.34); // Inclinación diagonal ~ -20 grados
+
+          const cigLen = Math.min(width * 0.58, 360);
+          const cigH = Math.max(18, minDim * 0.042);
+          const startX = -cigLen * 0.5;
+          const filterLen = cigLen * 0.27;
+          const tipLen = cigLen * 0.075;
+
+          // Filtro
+          offCtx.fillStyle = '#ffffff';
+          offCtx.fillRect(startX, -cigH / 2, filterLen, cigH);
+
+          // Separación clara entre filtro y papel (hueco negro de 5px)
+          // Cuerpo largo del cigarro
+          const bodyStart = startX + filterLen + 6;
+          const bodyLen = cigLen - filterLen - tipLen - 9;
+          offCtx.fillRect(bodyStart, -cigH / 2, bodyLen, cigH);
+
+          // Brasa encendida en la punta (#ff0000 en offscreen)
+          const emberX = bodyStart + bodyLen + 3;
+          offCtx.fillStyle = '#ff0000';
+          offCtx.fillRect(emberX, -cigH / 2, tipLen, cigH);
+
+          // Volutas finas de humo subiendo verticalmente desde la brasa
+          offCtx.rotate(0.34); // Volver a vertical para que el humo suba hacia arriba
+          const tipWorldX = (emberX + tipLen * 0.5) * Math.cos(-0.34);
+          const tipWorldY = (emberX + tipLen * 0.5) * Math.sin(-0.34) - cigH * 0.65;
+
+          offCtx.strokeStyle = '#0000ff'; // Azul puro en offscreen = humo
+          offCtx.lineWidth = 4;
+
+          // Voluta principal curva
+          offCtx.beginPath();
+          offCtx.moveTo(tipWorldX, tipWorldY);
+          offCtx.bezierCurveTo(
+            tipWorldX - 28, tipWorldY - 45,
+            tipWorldX + 34, tipWorldY - 95,
+            tipWorldX - 10, tipWorldY - 150
+          );
+          offCtx.stroke();
+
+          // Segunda voluta fina paralela
+          offCtx.lineWidth = 3;
+          offCtx.beginPath();
+          offCtx.moveTo(tipWorldX + 10, tipWorldY - 8);
+          offCtx.bezierCurveTo(
+            tipWorldX + 36, tipWorldY - 52,
+            tipWorldX - 18, tipWorldY - 105,
+            tipWorldX + 16, tipWorldY - 160
+          );
+          offCtx.stroke();
+
+          offCtx.restore();
+
+        } else if (shapeKey === 'calavera') {
+          // Calavera minimalista gótica con cuencas, fosa nasal y dientes marcados
+          const s = minDim * 0.25;
+
+          // Cráneo superior (bóveda)
+          offCtx.beginPath();
+          offCtx.arc(cx, cy - s * 0.22, s * 0.78, Math.PI * 0.85, Math.PI * 2.15, false);
+          // Pómulo derecho
+          offCtx.lineTo(cx + s * 0.62, cy + s * 0.25);
+          // Mandíbula derecha
+          offCtx.lineTo(cx + s * 0.42, cy + s * 0.48);
+          offCtx.lineTo(cx + s * 0.36, cy + s * 0.88);
+          // Mentón
+          offCtx.lineTo(cx - s * 0.36, cy + s * 0.88);
+          // Mandíbula izquierda
+          offCtx.lineTo(cx - s * 0.42, cy + s * 0.48);
+          offCtx.lineTo(cx - s * 0.62, cy + s * 0.25);
+          offCtx.closePath();
+          offCtx.fill();
+
+          // Recortar detalles internos en transparente (destination-out) para alto contraste
+          offCtx.globalCompositeOperation = 'destination-out';
+          offCtx.fillStyle = '#000000';
+          offCtx.strokeStyle = '#000000';
+
+          // Cuenca ojo izquierdo
+          offCtx.beginPath();
+          offCtx.ellipse(cx - s * 0.31, cy - s * 0.04, s * 0.21, s * 0.24, -0.15, 0, Math.PI * 2);
+          offCtx.fill();
+
+          // Cuenca ojo derecho
+          offCtx.beginPath();
+          offCtx.ellipse(cx + s * 0.31, cy - s * 0.04, s * 0.21, s * 0.24, 0.15, 0, Math.PI * 2);
+          offCtx.fill();
+
+          // Cavidad nasal (triángulo invertido / corazón invertido)
+          offCtx.beginPath();
+          offCtx.moveTo(cx, cy + s * 0.18);
+          offCtx.lineTo(cx - s * 0.11, cy + s * 0.42);
+          offCtx.lineTo(cx, cy + s * 0.38);
+          offCtx.lineTo(cx + s * 0.11, cy + s * 0.42);
+          offCtx.closePath();
+          offCtx.fill();
+
+          // Línea horizontal de la boca y dientes marcados
+          offCtx.lineWidth = Math.max(4, s * 0.045);
+          offCtx.beginPath();
+          offCtx.moveTo(cx - s * 0.26, cy + s * 0.66);
+          offCtx.lineTo(cx + s * 0.26, cy + s * 0.66);
+          offCtx.stroke();
+
+          // Separaciones verticales de los dientes
+          const toothOffsets = [-0.18, -0.06, 0.06, 0.18];
+          toothOffsets.forEach((ox) => {
+            offCtx.beginPath();
+            offCtx.moveTo(cx + s * ox, cy + s * 0.56);
+            offCtx.lineTo(cx + s * ox, cy + s * 0.77);
+            offCtx.stroke();
+          });
+
+          offCtx.globalCompositeOperation = 'source-over';
+
+        } else if (shapeKey === 'revolver') {
+          // Silueta clásica de revólver bien proporcionada
+          const s = Math.min(width * 0.62, minDim * 0.72);
+          const ox = cx - s * 0.48;
+          const oy = cy - s * 0.08;
+
+          // Cañón superior y mira frontal
+          offCtx.beginPath();
+          offCtx.moveTo(ox + s * 0.34, oy - s * 0.12);
+          offCtx.lineTo(ox + s * 0.92, oy - s * 0.12);
+          // Mira delantera
+          offCtx.lineTo(ox + s * 0.92, oy - s * 0.16);
+          offCtx.lineTo(ox + s * 0.96, oy - s * 0.12);
+          offCtx.lineTo(ox + s * 0.96, oy - s * 0.04);
+          // Varilla expulsora bajo el cañón
+          offCtx.lineTo(ox + s * 0.44, oy - s * 0.04);
+          offCtx.lineTo(ox + s * 0.44, oy + s * 0.06);
+          // Armazón inferior y guardamonte
+          offCtx.lineTo(ox + s * 0.24, oy + s * 0.08);
+          // Empuñadura (cacha) inclinada
+          offCtx.lineTo(ox + s * 0.12, oy + s * 0.36);
+          offCtx.quadraticCurveTo(ox + s * 0.03, oy + s * 0.37, ox + s * 0.01, oy + s * 0.31);
+          offCtx.lineTo(ox + s * 0.12, oy + s * 0.04);
+          // Martillo trasero
+          offCtx.lineTo(ox + s * 0.09, oy - s * 0.08);
+          offCtx.lineTo(ox + s * 0.14, oy - s * 0.13);
+          offCtx.lineTo(ox + s * 0.19, oy - s * 0.10);
+          offCtx.closePath();
+          offCtx.fill();
+
+          // Tambor (cilindro) destacado con contorno brillante
+          offCtx.fillStyle = '#00ff00';
+          offCtx.fillRect(ox + s * 0.20, oy - s * 0.10, s * 0.16, s * 0.15);
+
+          // Recortar hueco del guardamonte (gatillo) para darle realismo
+          offCtx.globalCompositeOperation = 'destination-out';
+          offCtx.beginPath();
+          offCtx.arc(ox + s * 0.27, oy + s * 0.07, s * 0.042, 0, Math.PI * 2);
+          offCtx.fill();
+          offCtx.globalCompositeOperation = 'source-over';
+
+        } else if (shapeKey === 'luna') {
+          // Luna creciente afilada y elegante con destellos alrededor
+          const r = minDim * 0.25;
+          offCtx.beginPath();
+          offCtx.arc(cx - r * 0.08, cy, r, 0.22 * Math.PI, 1.78 * Math.PI, false);
+          offCtx.arc(cx + r * 0.46, cy - r * 0.04, r * 0.86, 1.72 * Math.PI, 0.28 * Math.PI, true);
+          offCtx.closePath();
+          offCtx.fill();
+
+          // Función auxiliar para dibujar destellos de 4 puntas alrededor
+          const drawSparkle = (sx, sy, sr) => {
+            offCtx.beginPath();
+            offCtx.moveTo(sx, sy - sr);
+            offCtx.quadraticCurveTo(sx, sy, sx + sr, sy);
+            offCtx.quadraticCurveTo(sx, sy, sx, sy + sr);
+            offCtx.quadraticCurveTo(sx, sy, sx - sr, sy);
+            offCtx.quadraticCurveTo(sx, sy, sx, sy - sr);
+            offCtx.closePath();
+            offCtx.fill();
+          };
+
+          offCtx.fillStyle = '#00ff00';
+          drawSparkle(cx + r * 0.65, cy - r * 0.45, r * 0.18);
+          drawSparkle(cx + r * 0.88, cy + r * 0.18, r * 0.11);
+          drawSparkle(cx + r * 0.35, cy + r * 0.55, r * 0.09);
+
+        } else if (shapeKey === 'estrella') {
+          // Estrella de 5 puntas afilada con contorno brillante y centro marcado
+          const outerR = minDim * 0.28;
+          const innerR = outerR * 0.40;
+          const spikes = 5;
+          let rot = (Math.PI / 2) * 3;
+          const step = Math.PI / spikes;
+
+          offCtx.beginPath();
+          offCtx.moveTo(cx, cy - outerR);
+          for (let i = 0; i < spikes; i++) {
+            offCtx.lineTo(cx + Math.cos(rot) * outerR, cy + Math.sin(rot) * outerR);
+            rot += step;
+            offCtx.lineTo(cx + Math.cos(rot) * innerR, cy + Math.sin(rot) * innerR);
+            rot += step;
+          }
+          offCtx.closePath();
+          offCtx.fill();
+
+          offCtx.lineWidth = 5;
+          offCtx.strokeStyle = '#00ff00';
+          offCtx.stroke();
+        }
+
+        offCtx.restore();
+
+        // Muestreo fino (step 3 o 4) para máxima definición
+        const sampleStep = width < 640 ? 3 : 4;
+        const pts = samplePointsFromOffscreen(sampleStep, (x, y, data, idx) => {
+          const r = data[idx];
+          const g = data[idx + 1];
+          const b = data[idx + 2];
+          if (r > 200 && g < 50 && b < 50) return 'ember';
+          if (b > 200 && r < 50 && g < 50) return 'smoke';
+          if (g > 200 && r < 50 && b < 50) return 'outline';
+          return null;
+        });
+
+        assignPointsToFireflies(pts);
+      }
+
+      /**
+       * Dibuja cualquier texto escrito por el usuario en el canvas oculto con trazo grueso y nítido
+       */
+      function formText(rawText) {
+        const clean = rawText.trim();
+        if (!clean) {
+          scatterFireflies();
+          return;
+        }
+
+        // Detección de palabras clave para activar las siluetas detalladas
+        const keyword = normalizeKeyword(clean);
+        if (keyword === 'corazon' || keyword === '❤️' || keyword === 'amor') {
+          formPresetShape('corazon');
+          return;
+        }
+        if (keyword === 'cigarro' || keyword === 'cigarrillo' || keyword === '🚬') {
+          formPresetShape('cigarro');
+          return;
+        }
+        if (keyword === 'calavera' || keyword === 'craneo' || keyword === '💀') {
+          formPresetShape('calavera');
+          return;
+        }
+        if (keyword === 'revolver' || keyword === 'pistola' || keyword === '🔫') {
+          formPresetShape('revolver');
+          return;
+        }
+        if (keyword === 'luna' || keyword === '🌙') {
+          formPresetShape('luna');
+          return;
+        }
+        if (keyword === 'estrella' || keyword === '⭐') {
+          formPresetShape('estrella');
+          return;
+        }
+
+        currentShape = 'text';
+        currentText = clean;
+
+        offCtx.clearRect(0, 0, width, height);
+        offCtx.save();
+
+        // Auto-escalar la fuente gruesa para que ocupe bien el ancho sin cortarse
+        const maxTextWidth = width * 0.86;
+        let fontSize = Math.min(width * 0.24, height * 0.28, 210);
+        offCtx.font = `800 ${fontSize}px Inter, system-ui, sans-serif`;
+
+        let measured = offCtx.measureText(clean).width;
+        while (measured > maxTextWidth && fontSize > 32) {
+          fontSize -= 4;
+          offCtx.font = `800 ${fontSize}px Inter, system-ui, sans-serif`;
+          measured = offCtx.measureText(clean).width;
+        }
+
+        offCtx.fillStyle = '#ffffff';
+        offCtx.textAlign = 'center';
+        offCtx.textBaseline = 'middle';
+        offCtx.fillText(clean, width * 0.5, height * 0.42);
+        offCtx.restore();
+
+        // Muestreo ultra fino (3px) para que cada letra tenga bordes perfectos y legibles
+        const pts = samplePointsFromOffscreen(3);
+        assignPointsToFireflies(pts);
+      }
+
+      /**
+       * Dibuja el cielo nocturno negro profundo y silueta sutil del horizonte
+       */
+      function drawBackground(time) {
+        const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
+        skyGrad.addColorStop(0, '#020306');
+        skyGrad.addColorStop(0.7, '#050811');
+        skyGrad.addColorStop(1, '#090e1c');
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(0, 0, width, height);
+
+        for (let i = 0; i < bgStars.length; i++) {
+          const s = bgStars[i];
+          const twinkleAlpha = s.alpha * (0.6 + 0.4 * Math.sin(time * s.twinkle + i));
+          ctx.fillStyle = `rgba(226, 232, 240, ${twinkleAlpha.toFixed(3)})`;
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.fillStyle = '#010204';
+        ctx.beginPath();
+        ctx.moveTo(0, height);
+        for (let i = 0; i < grassBlades.length; i++) {
+          const b = grassBlades[i];
+          const sway = Math.sin(time * 0.0012 + b.phase) * 3.5;
+          ctx.lineTo(b.x, height - 8);
+          ctx.lineTo(b.x + b.lean + sway, height - b.h);
+          ctx.lineTo(b.x + 4, height - 8);
+        }
+        ctx.lineTo(width, height);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      /**
+       * Bucle principal de animación a 60 FPS
+       */
+      function animate(time) {
+        drawBackground(time);
+
+        // Modo de fusión 'lighter' hace que al juntarse muchas luciérnagas el brillo se intensifique mágicamente
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+
+        for (let i = 0; i < fireflies.length; i++) {
+          fireflies[i].update(time);
+          fireflies[i].draw(ctx, time);
+        }
+
+        ctx.restore();
+        requestAnimationFrame(animate);
+      }
+
+      /**
+       * Configuración de eventos de usuario
+       */
+      function bindEvents() {
+        window.addEventListener('resize', resizeCanvas);
+
+        // Envío del formulario de texto
+        morphForm.addEventListener('submit', (e) => {
+          e.preventDefault();
+          formText(wordInput.value);
+          wordInput.blur();
+        });
+
+        // Botón Dispersar
+        scatterBtn.addEventListener('click', () => {
+          wordInput.value = '';
+          scatterFireflies();
+        });
+
+        // Botones rápidos de figuras
+        presetButtons.forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const shape = btn.getAttribute('data-shape');
+            wordInput.value = shape.charAt(0).toUpperCase() + shape.slice(1);
+            formPresetShape(shape);
+          });
+        });
+
+        // Cambiar modo de interacción del cursor (Espantar / Atraer)
+        toggleModeBtn.addEventListener('click', () => {
+          if (pointer.mode === 'repel') {
+            pointer.mode = 'attract';
+            cursorModeLabel.textContent = 'Atraer';
+          } else {
+            pointer.mode = 'repel';
+            cursorModeLabel.textContent = 'Espantar';
+          }
+        });
+
+        // Eventos de ratón
+        canvas.addEventListener('mousemove', (e) => {
+          pointer.x = e.clientX;
+          pointer.y = e.clientY;
+          pointer.active = true;
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+          pointer.active = false;
+        });
+
+        // Eventos táctiles para móviles y tablets
+        canvas.addEventListener('touchstart', (e) => {
+          if (e.touches.length > 0) {
+            pointer.x = e.touches[0].clientX;
+            pointer.y = e.touches[0].clientY;
+            pointer.active = true;
+          }
+        }, { passive: true });
+
+        canvas.addEventListener('touchmove', (e) => {
+          if (e.touches.length > 0) {
+            pointer.x = e.touches[0].clientX;
+            pointer.y = e.touches[0].clientY;
+            pointer.active = true;
+          }
+        }, { passive: true });
+
+        canvas.addEventListener('touchend', () => {
+          pointer.active = false;
+        });
+      }
+
+      /**
+       * Inicialización al cargar la ventana
+       */
+      window.onload = function () {
+        createGlowSprites();
+        resizeCanvas();
+
+        fireflies = [];
+        for (let i = 0; i < FIREFLY_COUNT; i++) {
+          fireflies.push(new Firefly(i));
+        }
+
+        bindEvents();
+        requestAnimationFrame(animate);
+
+        // Pequeña demostración inicial después de 1.2 segundos
+        setTimeout(() => {
+          if (currentShape === 'scatter') {
+            formPresetShape('corazon');
+          }
+        }, 1200);
+      };
+    })();
+  </script>
+</body>
+</html>
